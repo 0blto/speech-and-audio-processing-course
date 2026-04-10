@@ -1,0 +1,16 @@
+name: lab3-tts
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - TTS==0.22.0
+      - tensorboard>=2.14
+      - matplotlib>=3.7
+      - numpy>=1.22
+      - scipy>=1.10
+      - soundfile>=0.12
+      - tqdm>=4.65
+      - librosa>=0.10
+      - requests>=2.28

@@ -1,0 +1,10 @@
+# Coqui TTS 0.22.x поддерживает Python 3.9–3.11 (не 3.12+).
+TTS==0.22.0
+tensorboard>=2.14
+matplotlib>=3.7
+numpy>=1.22
+scipy>=1.10
+soundfile>=0.12
+tqdm>=4.65
+librosa>=0.10
+requests>=2.28
