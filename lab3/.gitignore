@@ -12,3 +12,4 @@ outputs/**/.tts_runtime/
 *.wav
 .DS_Store
 phoneme_cache/
+/experiments

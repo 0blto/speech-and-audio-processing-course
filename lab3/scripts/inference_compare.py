@@ -15,6 +15,18 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 def _espeak_available() -> bool:
     return bool(shutil.which("espeak-ng") or shutil.which("espeak"))
 
+def normalize_text(text: str) -> str:
+    replacements = {
+        "—": "-",
+        "–": "-",
+        "…": "...",
+        "’": "'",
+        "“": '"',
+        "”": '"',
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    return text
 
 def _load_tts(
     model_name: str,
@@ -44,7 +56,7 @@ def _load_tts(
         cfg_path = config_cache_dir / f"{safe}_no_phonemes.json"
         config.save_json(str(cfg_path))
         print(
-            "  Примечание: eSpeak не найден в PATH — для этой модели отключены фонемы (use_phonemes=false). "
+            "eSpeak не найден в PATH — для этой модели отключены фонемы (use_phonemes=false). "
             "Чтобы использовать фонемы как в исходной модели, установите espeak-ng и добавьте его в PATH.",
             file=sys.stderr,
         )
@@ -154,7 +166,9 @@ def main() -> None:
     parser.add_argument("--gpu", action="store_true", help="Использовать CUDA, если есть")
     args = parser.parse_args()
 
-    text = args.text_file.read_text(encoding="utf-8")
+    text = normalize_text(args.text_file.read_text(encoding="utf-8"))
+    text = text.replace(":", ". ")
+    text = text.replace("-", ", ")
     out = args.out_dir.resolve()
     out.mkdir(parents=True, exist_ok=True)
     tts_cfg_cache = out / ".tts_runtime"
@@ -180,7 +194,7 @@ def main() -> None:
         results.append((short, dt, wav_path))
         print(f"  {short}: {dt:.2f} s -> {wav_path.name}")
 
-    print("\nКратко (для отчёта):")
+    print("\nОтчёт")
     for short, dt, wp in results:
         print(f"  - {short}: время {dt:.2f} с, файл {wp}")
     print("\nСлушайте wav и сравните разборчивость и естественность; mel-картинки — визуально сравните формантную структуру.")

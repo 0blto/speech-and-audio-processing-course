@@ -6,7 +6,7 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 
-DEFAULT_URL = "https://data.keith.it/LJSpeech-1.1.tar.bz2"
+DEFAULT_URL = "https://data.keithito.com/data/speech/LJSpeech-1.1.tar.bz2"
 EXPECTED_MIN_BYTES = 2_000_000_000
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
