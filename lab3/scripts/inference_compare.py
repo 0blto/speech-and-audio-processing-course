@@ -150,7 +150,10 @@ def save_mel_png(wav: np.ndarray, sr: int, out_png: Path) -> None:
 def main() -> None:
     _check_py()
 
-    parser = argparse.ArgumentParser(description="Синтез и сравнение Tacotron2 vs VITS")
+    parser = argparse.ArgumentParser(
+        description="Синтез и сравнение готовых Tacotron2 и VITS (без fine-tune). "
+        "Дообучается в проекте только VITS — см. scripts/finetune.py"
+    )
     parser.add_argument(
         "--text-file",
         type=Path,

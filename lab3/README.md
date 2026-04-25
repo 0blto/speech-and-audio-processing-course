@@ -1,109 +1,106 @@
 # Лабораторная работа: нейросетевой синтез речи (TTS)
 
-Проект на базе **Coqui TTS** (готовые модели, без реализации архитектур с нуля).
+Проект на базе **Coqui TTS**: готовые модели, дообучение **VITS** на диктора из **VCTK** (английский мультидикторный корпус). **Tacotron2** здесь **не** дообучается; для сравнения исходных весов без обучения остаётся `scripts/inference_compare.py` (Tacotron2 + VITS из коробки).
 
 ## Модели
 
-| Тип | Имя в Coqui | Комментарий |
-|-----|-------------|-------------|
-| Классическая (Tacotron2) | `tts_models/en/ljspeech/tacotron2-DDC` | Tacotron2 + отдельный вокодер в составе пайплайна |
-| Современная (VITS) | `tts_models/en/ljspeech/vits` | End-to-end, быстрый синтез |
+| Назначение | Coqui-имя | Комментарий |
+|------------|-------------|-------------|
+| База для fine-tune | `tts_models/en/ljspeech/vits` | VITS, предобучение на LJSpeech (дальше — адаптация к новому диктору из VCTK) |
+| Сравнение «без обучения» | `.../tacotron2-DDC` и `.../vits` | Скрипт `inference_compare.py` |
 
-WaveNet в Coqui для LJSpeech обычно не выставлен отдельной готовой моделью; Tacotron2 здесь соответствует «классическому» ветке задания.
+**Идея fine-tune:** тот же английский фонетический/просодический prior в предобученных весах; на данных одного VCTK-диктора меняется акустика (тембр) при сохранении переносимой интонации и беглости.
 
 ## Требования
 
-- **Python 3.9, 3.10 или 3.11** (пакет `TTS==0.22.0` **не** поддерживает Python 3.12+).
-- **Windows / Linux / macOS**. GPU необязателен (на CPU дообучение и синтез будут медленнее).
-- Для корректной работы **фонем** (англ. LJSpeech-модели) установите **eSpeak NG**:
-  - Windows: [релизы eSpeak NG](https://github.com/espeak-ng/espeak-ng/releases) — добавьте `espeak-ng.exe` в `PATH` или укажите путь в документации Coqui.
-  - Linux: `sudo apt install espeak-ng` (или аналог).
-
-Скрипт `scripts/inference_compare.py`, если **не** находит `espeak-ng` / `espeak` в `PATH`, сам подставляет для VITS фонемайзер **gruut** (зависимость Coqui, без отдельной установки). Так синтез запускается «из коробки»; для поведения максимально близкого к исходной сборке модели по-прежнему лучше установить eSpeak NG.
+- **Python 3.9, 3.10 или 3.11** (`TTS==0.22.0` не поддерживает 3.12+).
+- **Windows / Linux / macOS**. **GPU 3090 (24 ГБ)**: в скрипте включён mixed precision, батч до 20 — обычно укладывается в VRAM; при OOM уменьшите батч в коде/ветке эксперимента.
+- **eSpeak NG** в `PATH` — для **фонем** как в исходной LJSpeech-VITS. Без eSpeak Coqui при инференсе может сработать в режиме графем, но **обучение** с фонемами предпочтительнее. Windows: [релизы eSpeak NG](https://github.com/espeak-ng/espeak-ng/releases).
 
 ## Установка
-
-Из корня проекта:
 
 ```bash
 python check_env.py
 python -m venv .venv
 ```
 
-Активация:
-
-- Windows (cmd): `.venv\Scripts\activate`
-- Windows (PowerShell): `.venv\Scripts\Activate.ps1`
-- Linux/macOS: `source .venv/bin/activate`
-
 ```bash
 pip install -U pip
 pip install -r requirements.txt
 ```
 
-Либо через Conda:
+Или: `conda env create -f environment.yml` / `conda activate lab3-tts`.
 
-```bash
-conda env create -f environment.yml
-conda activate lab3-tts
-```
-
-## 1. Сравнение моделей (инференс, без обучения)
-
-Скачает веса при первом запуске (нужен интернет).
+## 1. Сравнение готовых моделей (без обучения)
 
 ```bash
 python scripts/inference_compare.py
+# опционально: --gpu
 ```
 
-## 2. Данные LJSpeech (для дообучения)
+Сохраняются `wav` и **mel**-картинки. Дообученный VITS смотрите в разделе 4.
+
+## 2. VCTK: скачивание и один «низоватый» мужской диктор (англ.)
+
+Полный **VCTK-Corpus-0.92** — около **10 GiB** (долгая загрузка). Официальная ссылка [в коде](scripts/download_vctk.py) Coqui; при сбоях сети можно вручную скачать тот же zip в `data/` и распаковать.
 
 ```bash
-python scripts/download_ljspeech.py
+python scripts/download_vctk.py
 ```
+
+По умолчанию диктор **`p360`** (мужской, англ. с шотландским акцентом; часто используется как низоватый мужской голос). Список ID см. в документации VCTK; можно заменить, например:
 
 ```bash
-python scripts/prepare_subset.py --num-samples 500
+python scripts/prepare_vctk_speaker.py --vctk-root "ПУТЬ/К/VCTK-Corpus-0.92" --speaker p226
 ```
 
-## 3. Короткое дообучение (1 эпоха) и эксперименты A/B
+Скрипт копирует только `txt/<id>/` и `wav48_silence_trimmed/<id>/` в `data/VCTK_<id>/`.
 
-Два набора гиперпараметров:
+## 3. Два эксперимента VITS (A и B) — гиперпараметры и бюджет по времени
 
-- **Эксперимент A**: `lr = 1e-4`, `batch_size = 8`
-- **Эксперимент B**: `lr = 2.5e-5`, `batch_size = 20`
+| Эксперимент | `lr_gen` = `lr_disc` | `batch` | Смысл |
+|-------------|----------------------|---------|--------|
+| **A** | 1.5e-4 | 8 | выше шаг, мельче батч |
+| **B** | 4e-5 | 20 | осторожнее, крупный батч (меньше шагов на эпоху) |
 
-Примеры:
+По умолчанию **1800 эпох** (оба). На RTX 3090 при типичных **~0,15–0,35 с на шаг** (зависит от длины сегментов и I/O) обычно укладываются в **~6–12 ч** на **один** ран, т.е. **A + B** часто **не дольше ~20 ч**; если сессии длиннее — уменьшите `--epochs` (одинаково для A и B, чтобы сравнение оставалось честным по объёму эпох).
+
+**Артефакты в `runs/<имя_рана>/`:**
+
+- `config.json` — конфиг, нужный для инференса
+- `run_manifest.json` — гиперпараметры и путь к данным
+- `*.pth` / `best_model.pth` (если включено сохранение) — веса
+- TensorBoard: `events.out.tfevents*`
+- `phoneme_cache/`
+
+**Кривая обучения (PNG):** после/во время тренинга
 
 ```bash
-python scripts/finetune.py --model tacotron2 --exp A
-python scripts/finetune.py --model tacotron2 --exp B
+python scripts/export_curves_from_events.py runs/vits_vctk_finetune_...
 ```
 
-### Логирование (TensorBoard)
+Пишет `figures/training_curves.png` и `scalar_tags.txt` в этой папке.
 
-В другом терминале:
+**TensorBoard:**
 
 ```bash
 tensorboard --logdir runs
 ```
 
-В логах: **loss**, **learning rate**, **mel**-спектрограммы (и другие метрики, которые пишет конкретная модель).
-
-Сравните кривые **A vs B** для одной модели: при более высоком `lr` шаги обновления крупнее; при большем `batch` градиенты стабильнее, но шагов за эпоху меньше.
-
-### Синтез после дообучения
-
-Укажите путь к лучшему чекпоинту и `config.json` из каталога `runs/...` (см. документацию Coqui):
+## 4. Синтез с дообученной VITS: аудио + мел + линейный спектр (STFT)
 
 ```bash
-tts --text "Hello world" --model_path path/to/best_model.pth --config_path path/to/config.json --out_path outputs/finetuned.wav
+python scripts/synthesize_finetuned_vits.py --run-dir runs/ИМЯ_РАНА --gpu
+# текст: data/synthesis_text.txt  |  выход: outputs/finetuned_vits/
 ```
 
-## Оценка качества (для отчёта)
+Сохраняется: `*.wav`, `*_mel.png`, `*_linear_stft.png`.
 
-- **Разборчивость (intelligibility)**: MOS, тест с перечислением слов, STOI/PESQ при наличии референса.
-- **Качество / естественность**: субъективное прослушивание, MCD между mel при наличии эталона.
-- **Скорость**: время синтеза (скрипт `inference_compare.py` печатает секунды).
+## 5. Оценка (для отчёта)
 
-Краткие ожидания: **VITS** часто быстрее и «цельнее» end-to-end; **Tacotron2** может давать характерный тембр LJSpeech с типичным вокодером.
+- Разборчивость, естественность (MOS, прослушивание), по желанию STOI/MCD при референсе
+- Сравнение **A vs B** по лоссам/мел-логов и по субъективной окраске голоса
+
+## LJSpeech (старый вариант)
+
+- `scripts/prepare_subset.py` — подмножество LJSpeech; **основной сценарий лабы — VCTK и `prepare_vctk_speaker.py`**.

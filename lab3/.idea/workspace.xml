@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="884044bd-4ad7-484e-9f7f-127e8c0ba6dc" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/download_ljspeech.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/finetune.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/finetune.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/inference_compare.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/inference_compare.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/prepare_subset.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/prepare_subset.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 6
+}]]></component>
+  <component name="ProjectId" id="3Co2ceCY9CwnuLxWkC8q23dx33u" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.download_vctk.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "ignore.virus.scanning.warn.message": "true",
+    "last_opened_file_path": "C:/Workspace/speech/lab3/data"
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Workspace\speech\lab3\data" />
+    </key>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-f79232025321-b1aafe368c7f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-253.28294.256" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="884044bd-4ad7-484e-9f7f-127e8c0ba6dc" name="Changes" comment="" />
+      <created>1777037683962</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1777037683962</updated>
+    </task>
+    <servers />
+  </component>
+</project>
