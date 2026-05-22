@@ -5,6 +5,7 @@ Fallbacks:
 """
 
 # Подключаем стандартные модули
+import array
 import wave
 from pathlib import Path
 
@@ -20,7 +21,7 @@ def prepare_text_common(config: dict, text: str) -> str:
         str: Подготовленный текст.
 
     Fallbacks:
-        Если замены не заданы, возвращается исходный текст.
+        Если замены не заданы, возвращается нормализованный исходный текст.
     """
 
     # Нормализуем переносы строк и пробелы
@@ -36,38 +37,50 @@ def prepare_text_common(config: dict, text: str) -> str:
 
 
 def audio_to_samples(audio: object) -> list[float]:
-    """Преобразует аудиообъект в плоский список float.
+    """Преобразует аудиообъект в плоский список mono-сэмплов.
 
     Parameters:
-        audio (object): Tensor, numpy array или список.
+        audio (object): Tensor, numpy array или список сэмплов.
 
     Returns:
-        list[float]: Плоский список сэмплов.
+        list[float]: Плоский список сэмплов в формате float.
 
     Fallbacks:
-        Если формат неизвестен, делается попытка итерироваться по объекту как по последовательности.
+        Если объект не поддерживает прямое преобразование, выполняется попытка итерации по нему как по последовательности.
     """
 
-    # Обрабатываем torch tensor при наличии методов detach и cpu
+    # Переносим tensor на CPU и преобразуем к numpy при наличии нужных методов
     if hasattr(audio, "detach"):
         audio = audio.detach()
     if hasattr(audio, "cpu"):
         audio = audio.cpu()
     if hasattr(audio, "numpy"):
         audio = audio.numpy()
+
+    # Разворачиваем многомерный массив в одномерный
+    if hasattr(audio, "reshape"):
+        try:
+            audio = audio.reshape(-1)
+        except TypeError:
+            pass
+
+    # Преобразуем объект к обычным спискам Python
     if hasattr(audio, "tolist"):
         audio = audio.tolist()
 
-    # Уплощаем вложенные списки
+    # Уплощаем вложенные списки в единый список float
     if isinstance(audio, list):
-        if audio and isinstance(audio[0], list):
-            flattened = []
-            for row in audio:
-                flattened.extend(row)
-            return [float(value) for value in flattened]
-        return [float(value) for value in audio]
+        flattened: list[float] = []
+        stack = list(audio)
+        while stack:
+            value = stack.pop(0)
+            if isinstance(value, list):
+                stack = list(value) + stack
+                continue
+            flattened.append(float(value))
+        return flattened
 
-    # Преобразуем итерируемые объекты в список
+    # Преобразуем итерируемый объект в список float
     return [float(value) for value in audio]
 
 
@@ -86,27 +99,33 @@ def save_audio_data(output_path: str, audio: object, sample_rate: int) -> None:
         Если soundfile недоступен, используется стандартный модуль wave.
     """
 
-    # Пытаемся использовать soundfile для сохранения
+    # Создаём родительскую папку для выходного файла
+    ensure_parent_dir(output_path)
+
+    # Приводим аудио к плоскому списку mono-сэмплов
+    samples_float = audio_to_samples(audio)
+
+    # Пытаемся сохранить wav через soundfile
     try:
         import soundfile as sf
 
-        sf.write(output_path, audio, sample_rate)
+        sf.write(output_path, samples_float, sample_rate)
         return
     except ImportError:
         pass
 
-    # Преобразуем сэмплы к int16
-    samples = []
-    for value in audio_to_samples(audio):
+    # Преобразуем float-сэмплы в int16 для стандартного wave writer
+    samples = array.array("h")
+    for value in samples_float:
         clipped = max(-1.0, min(1.0, float(value)))
         samples.append(int(clipped * 32767.0))
 
-    # Сохраняем wav стандартным модулем
+    # Сохраняем wav стандартным модулем wave
     with wave.open(output_path, "wb") as handle:
         handle.setnchannels(1)
         handle.setsampwidth(2)
         handle.setframerate(sample_rate)
-        handle.writeframes(b"".join(int(sample).to_bytes(2, byteorder="little", signed=True) for sample in samples))
+        handle.writeframes(samples.tobytes())
 
 
 def read_audio_duration(output_path: str) -> float:
@@ -122,7 +141,7 @@ def read_audio_duration(output_path: str) -> float:
         Если файл отсутствует или повреждён, возвращается 0.0.
     """
 
-    # Пытаемся открыть wav как стандартный PCM-файл
+    # Пытаемся открыть wav и вычислить длительность по числу фреймов
     try:
         with wave.open(output_path, "rb") as handle:
             frame_count = handle.getnframes()
@@ -149,4 +168,3 @@ def ensure_parent_dir(output_path: str) -> None:
 
     # Создаём каталог результата
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
