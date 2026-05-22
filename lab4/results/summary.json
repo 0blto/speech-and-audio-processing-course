@@ -1,0 +1,50 @@
+[
+  {
+    "model_id": "chatterbox_multilingual_ru",
+    "average_latency_sec": 0.139,
+    "error_rates_percent": {
+      "abbr_graphic": 100.0,
+      "abbr_lexical": 100.0,
+      "numbers": 100.0
+    },
+    "stress_notes": "",
+    "labels": {
+      "abbr_graphic": "Графические сокращения",
+      "abbr_lexical": "Аббревиатуры и сложносокращённые слова",
+      "numbers": "Цифровые обозначения",
+      "stress": "Ударение"
+    }
+  },
+  {
+    "model_id": "silero_tts_v4_ru",
+    "average_latency_sec": 0.093,
+    "error_rates_percent": {
+      "abbr_graphic": 100.0,
+      "abbr_lexical": 100.0,
+      "numbers": 100.0
+    },
+    "stress_notes": "",
+    "labels": {
+      "abbr_graphic": "Графические сокращения",
+      "abbr_lexical": "Аббревиатуры и сложносокращённые слова",
+      "numbers": "Цифровые обозначения",
+      "stress": "Ударение"
+    }
+  },
+  {
+    "model_id": "silero_tts_v5_ru",
+    "average_latency_sec": 0.08,
+    "error_rates_percent": {
+      "abbr_graphic": 80.0,
+      "abbr_lexical": 100.0,
+      "numbers": 100.0
+    },
+    "stress_notes": "",
+    "labels": {
+      "abbr_graphic": "Графические сокращения",
+      "abbr_lexical": "Аббревиатуры и сложносокращённые слова",
+      "numbers": "Цифровые обозначения",
+      "stress": "Ударение"
+    }
+  }
+]

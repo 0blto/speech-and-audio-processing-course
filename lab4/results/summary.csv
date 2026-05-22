@@ -1,0 +1,4 @@
+model_id,avg_latency_sec,abbr_graphic_error_percent,abbr_lexical_error_percent,numbers_error_percent,stress_notes
+chatterbox_multilingual_ru,0.139,100.0,100.0,100.0,
+silero_tts_v4_ru,0.093,100.0,100.0,100.0,
+silero_tts_v5_ru,0.08,80.0,100.0,100.0,
