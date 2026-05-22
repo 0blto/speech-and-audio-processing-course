@@ -6,6 +6,7 @@ Fallbacks:
 
 # Подключаем стандартные модули
 import array
+import re
 import wave
 from pathlib import Path
 
@@ -84,6 +85,110 @@ def audio_to_samples(audio: object) -> list[float]:
     return [float(value) for value in audio]
 
 
+def split_text_for_tts(text: str, max_length: int) -> list[str]:
+    """Разбивает длинный текст на куски, удобные для TTS.
+
+    Parameters:
+        text (str): Подготовленный текст для синтеза.
+        max_length (int): Максимальная длина одного куска.
+
+    Returns:
+        list[str]: Список кусков текста в исходном порядке.
+
+    Fallbacks:
+        Если текст нельзя разбить по абзацам, предложениям или словам,
+        используется жёсткое разбиение по символам.
+    """
+
+    normalized = str(text).strip()
+    if not normalized:
+        return []
+
+    if max_length <= 0 or len(normalized) <= max_length:
+        return [normalized]
+
+    chunks: list[str] = []
+
+    def flush_buffer(buffer: str) -> str:
+        cleaned = buffer.strip()
+        if cleaned:
+            chunks.append(cleaned)
+        return ""
+
+    def split_hard(fragment: str) -> None:
+        remaining = fragment.strip()
+        while remaining:
+            if len(remaining) <= max_length:
+                chunks.append(remaining)
+                return
+            split_index = remaining.rfind(" ", 0, max_length + 1)
+            if split_index <= 0:
+                split_index = max_length
+            chunks.append(remaining[:split_index].strip())
+            remaining = remaining[split_index:].strip()
+
+    # Сначала пробуем абзацы, затем предложения внутри них.
+    paragraphs = [part.strip() for part in normalized.split("\n") if part.strip()]
+    for paragraph in paragraphs:
+        if len(paragraph) <= max_length:
+            chunks.append(paragraph)
+            continue
+
+        sentences = [
+            part.strip()
+            for part in re.split(r"(?<=[.!?…])\s+", paragraph)
+            if part.strip()
+        ]
+        buffer = ""
+        for sentence in sentences:
+            if len(sentence) > max_length:
+                buffer = flush_buffer(buffer)
+                split_hard(sentence)
+                continue
+
+            candidate = sentence if not buffer else f"{buffer} {sentence}"
+            if len(candidate) <= max_length:
+                buffer = candidate
+                continue
+
+            buffer = flush_buffer(buffer)
+            buffer = sentence
+
+        flush_buffer(buffer)
+
+    return chunks
+
+
+def concat_audio_segments(segments: list[object], sample_rate: int, pause_ms: int = 120) -> list[float]:
+    """Склеивает несколько аудиосегментов в один поток mono-сэмплов.
+
+    Parameters:
+        segments (list[object]): Список аудиосегментов.
+        sample_rate (int): Частота дискретизации итогового wav.
+        pause_ms (int): Небольшая пауза между сегментами в миллисекундах.
+
+    Returns:
+        list[float]: Плоский список итоговых сэмплов.
+
+    Fallbacks:
+        Если сегменты пустые, возвращается пустой список.
+    """
+
+    if not segments:
+        return []
+
+    pause_samples = max(0, int(sample_rate * pause_ms / 1000))
+    silence = [0.0] * pause_samples
+    merged: list[float] = []
+
+    for index, segment in enumerate(segments):
+        merged.extend(audio_to_samples(segment))
+        if index != len(segments) - 1 and pause_samples:
+            merged.extend(silence)
+
+    return merged
+
+
 def save_audio_data(output_path: str, audio: object, sample_rate: int) -> None:
     """Сохраняет аудиообъект в wav-файл.
 
@@ -112,6 +217,10 @@ def save_audio_data(output_path: str, audio: object, sample_rate: int) -> None:
         sf.write(output_path, samples_float, sample_rate)
         return
     except ImportError:
+        pass
+    except Exception:
+        # Если soundfile установлен, но не может записать wav в текущем окружении,
+        # откатываемся на стандартный wave writer.
         pass
 
     # Преобразуем float-сэмплы в int16 для стандартного wave writer

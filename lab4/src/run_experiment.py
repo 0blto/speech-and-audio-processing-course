@@ -222,6 +222,7 @@ def synthesize_item(model_config: dict, text_row: dict, force: bool, model_cache
             print(f"[error] model={model_config['id']} item={text_row['item_id']} message={error_message}", file=sys.stderr)
 
     # Возвращаем метаданные запуска для аудио или ошибки
+    audio_path_value = str(audio_path.relative_to(RESULTS_DIR.parent)) if audio_path.exists() else ""
     return {
         "model_id": str(model_config["id"]),
         "model_name": str(model_config.get("name", model_config["id"])),
@@ -229,7 +230,7 @@ def synthesize_item(model_config: dict, text_row: dict, force: bool, model_cache
         "group": str(text_row["group"]),
         "item_id": str(text_row["item_id"]),
         "text": str(text_row["text"]),
-        "audio_path": str(audio_path.relative_to(RESULTS_DIR.parent)),
+        "audio_path": audio_path_value,
         "audio_duration_sec": duration_sec,
         "sample_rate": sample_rate,
         "status": status,
@@ -299,6 +300,64 @@ def write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
             writer.writerow(row)
 
 
+def make_manual_row_key(row: dict) -> tuple[str, str, str]:
+    """Строит стабильный ключ строки manual_scores.csv.
+
+    Parameters:
+        row (dict): Строка manual_scores.csv.
+
+    Returns:
+        tuple[str, str, str]: Ключ вида model_id/group/item_id.
+
+    Fallbacks:
+        Если часть полей отсутствует, в ключ попадают пустые строки.
+    """
+
+    return (
+        str(row.get("model_id", "")).strip(),
+        str(row.get("group", "")).strip(),
+        str(row.get("item_id", "")).strip(),
+    )
+
+
+def merge_manual_rows(existing_rows: list[dict], new_rows: list[dict], force: bool) -> list[dict]:
+    """Объединяет старые и новые строки manual_scores.csv.
+
+    Parameters:
+        existing_rows (list[dict]): Уже сохранённые строки manual_scores.csv.
+        new_rows (list[dict]): Новые строки для текущего запуска.
+        force (bool): Нужно ли полностью заменить строки затронутых моделей.
+
+    Returns:
+        list[dict]: Итоговый набор строк для сохранения.
+
+    Fallbacks:
+        Если новых строк нет, возвращает существующие строки без изменений.
+    """
+
+    if not new_rows:
+        return existing_rows
+
+    target_model_ids = {str(row.get("model_id", "")).strip() for row in new_rows}
+
+    # При force полностью заменяем строки только для затронутых моделей.
+    if force:
+        preserved_rows = [
+            row for row in existing_rows if str(row.get("model_id", "")).strip() not in target_model_ids
+        ]
+        return preserved_rows + new_rows
+
+    # Без force сохраняем существующие ручные оценки и добавляем только отсутствующие строки.
+    existing_keys = {make_manual_row_key(row) for row in existing_rows}
+    merged_rows = list(existing_rows)
+    for row in new_rows:
+        if make_manual_row_key(row) not in existing_keys:
+            merged_rows.append(row)
+            existing_keys.add(make_manual_row_key(row))
+
+    return merged_rows
+
+
 def write_json(path: Path, payload: object) -> None:
     """Сохраняет объект в json-файл.
 
@@ -352,9 +411,13 @@ def generate_outputs(models: list[dict], model_filter: str, force: bool) -> None
     # Сохраняем автоматический журнал запусков
     write_json(RUNS_PATH, run_rows)
 
-    # Сохраняем шаблон ручных оценок
+    # Обновляем шаблон ручных оценок, не затрагивая другие модели
     manual_rows = build_manual_rows(run_rows)
-    write_csv(MANUAL_SCORES_PATH, MANUAL_SCORE_FIELDS, manual_rows)
+    existing_manual_rows = []
+    if MANUAL_SCORES_PATH.exists():
+        existing_manual_rows = read_manual_rows(MANUAL_SCORES_PATH)
+    merged_manual_rows = merge_manual_rows(existing_manual_rows, manual_rows, force)
+    write_csv(MANUAL_SCORES_PATH, MANUAL_SCORE_FIELDS, merged_manual_rows)
 
     print(f"[saved] runs={RUNS_PATH}")
     print(f"[saved] manual_scores={MANUAL_SCORES_PATH}")

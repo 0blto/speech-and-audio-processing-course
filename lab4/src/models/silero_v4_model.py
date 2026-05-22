@@ -6,8 +6,10 @@ Fallbacks:
 
 # Подключаем общие утилиты
 from models.helpers import prepare_text_common
+from models.helpers import concat_audio_segments
 from models.helpers import read_audio_duration
 from models.helpers import save_audio_data
+from models.helpers import split_text_for_tts
 
 
 def validate_config(config: dict) -> None:
@@ -107,6 +109,22 @@ def synthesize(model_handle: object, config: dict, text: str, output_path: str) 
     # Получаем параметры выбранного голоса
     speaker_name = str(config["speaker_name"])
     sample_rate = int(config["sample_rate"])
+    max_text_length = int(config.get("max_text_length", 950))
+    text_chunks = split_text_for_tts(text, max_text_length)
+
+    # Для длинного текста синтезируем куски отдельно и склеиваем в один wav.
+    if len(text_chunks) > 1:
+        audio_segments = []
+        for chunk in text_chunks:
+            audio_segments.append(model_handle.apply_tts(text=chunk, speaker=speaker_name, sample_rate=sample_rate))
+        save_audio_data(output_path, concat_audio_segments(audio_segments, sample_rate), sample_rate)
+        return {
+            "audio_path": output_path,
+            "audio_duration_sec": read_audio_duration(output_path),
+            "sample_rate": sample_rate,
+            "status": "generated",
+            "error_message": "",
+        }
 
     # Пытаемся сохранить wav штатным методом модели
     try:
@@ -122,4 +140,3 @@ def synthesize(model_handle: object, config: dict, text: str, output_path: str) 
         "status": "generated",
         "error_message": "",
     }
-
