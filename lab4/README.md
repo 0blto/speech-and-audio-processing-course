@@ -2,19 +2,17 @@
 
 ## Анализ систем синтеза речи
 
-Цель работы: сравнить 5 локально запускаемых open-source систем синтеза русской речи по скорости старта синтеза, чтению сокращений, чтению цифровых обозначений и корректности ударения.
+Цель работы: сравнить 3 локально запускаемые open-source системы синтеза русской речи по скорости старта синтеза, чтению сокращений, чтению цифровых обозначений и корректности ударения.
 
 В этой реализации лабораторная организована как полуручной эксперимент:
 - генерация аудио, шаблон таблиц и сводные проценты считаются скриптом
 - latency до первого звука, ошибки чтения и наблюдения по ударению фиксируются вручную после прослушивания
 
-## Выбранные 5 моделей
+## Модели в текущем запуске
 
 1. `Chatterbox Multilingual`
-2. `F5-TTS_RUSSIAN`
-3. `ESpeech-TTS RL-V2`
-4. `Silero TTS V5`
-5. `Silero TTS V4`
+2. `Silero TTS V5`
+3. `Silero TTS V4`
 
 ## Структура проекта
 
@@ -22,8 +20,6 @@
 - [src/run_experiment.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/run_experiment.py) запускает эксперимент и строит сводку
 - [src/models/registry.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/models/registry.py) выбирает адаптер модели
 - [src/models/chatterbox_model.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/models/chatterbox_model.py) ручка для Chatterbox
-- [src/models/f5_tts_model.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/models/f5_tts_model.py) ручка для F5-TTS_RUSSIAN
-- [src/models/espeech_model.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/models/espeech_model.py) ручка для ESpeech-TTS
 - [src/models/silero_v5_model.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/models/silero_v5_model.py) ручка для Silero TTS V5
 - [src/models/silero_v4_model.py](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/src/models/silero_v4_model.py) ручка для Silero TTS V4
 - [data/models.json](/C:/Users/krish/VSProjects/speech-and-audio-processing-course/lab4/data/models.json) хранит конфигурации моделей
@@ -50,20 +46,6 @@
 - по умолчанию запускается без reference audio
 - по данным официального репозитория предпочтителен Python `3.11`
 
-### F5-TTS_RUSSIAN
-
-- reference-based модель
-- требует `ref_audio_path` и `ref_text`
-- поддерживает ручную разметку ударения через символ `+`
-- в проекте конфиг настраивается через `models.json`
-
-### ESpeech-TTS RL-V2
-
-- reference-based модель
-- использует F5-совместимый inference pipeline
-- может использовать `RUAccent` для автоматической расстановки ударений
-- также требует `ref_audio_path` и `ref_text`
-
 ### Silero TTS V5
 
 - обычный TTS без reference audio
@@ -79,8 +61,7 @@
 
 1. Подготовить `lab4/data/models.json`
 2. Скачать нужные веса в `lab4/models/`
-3. Положить reference wav-файлы в `lab4/reference/` для `F5-TTS_RUSSIAN` и `ESpeech-TTS`
-4. Установить зависимости для конкретных моделей
+3. Установить зависимости для конкретных моделей
 
 Базовый запуск генерации:
 
@@ -147,11 +128,12 @@ python lab4/src/run_experiment.py --summarize
 
 ## Методологическое примечание
 
-Модели используются в двух режимах:
-- `Chatterbox`, `Silero TTS V5`, `Silero TTS V4` как обычный TTS без reference audio
-- `F5-TTS_RUSSIAN` и `ESpeech-TTS` как reference-based TTS с фиксированным reference clip
+В текущей сводке участвуют только модели, работающие как обычный TTS без reference audio:
+- `Chatterbox Multilingual`
+- `Silero TTS V5`
+- `Silero TTS V4`
 
-Это различие нужно явно указать в отчёте, чтобы сравнение было интерпретируемым.
+Это делает сравнение прямым: все три системы запускались в одинаковом режиме без фиксированного reference clip.
 
 ## Таблицы для отчёта
 
@@ -161,70 +143,59 @@ python lab4/src/run_experiment.py --summarize
 
 | Модель | Средняя latency, сек |
 |---|---|
-| `chatterbox_multilingual_ru` | |
-| `f5_tts_russian` | |
-| `espeech_tts_rl_v2` | |
-| `silero_tts_v5_ru` | |
-| `silero_tts_v4_ru` | |
+| `chatterbox_multilingual_ru` | `0.139` |
+| `silero_tts_v5_ru` | `0.080` |
+| `silero_tts_v4_ru` | `0.093` |
 
-Вывод:
+Вывод: наименьшая задержка старта у `silero_tts_v5_ru`, затем идёт `silero_tts_v4_ru`. `chatterbox_multilingual_ru` стартует заметно медленнее остальных.
 
 ### Таблица 2. Ошибки чтения графических сокращений
 
 | Модель | Ошибок, % |
 |---|---|
-| `chatterbox_multilingual_ru` | |
-| `f5_tts_russian` | |
-| `espeech_tts_rl_v2` | |
-| `silero_tts_v5_ru` | |
-| `silero_tts_v4_ru` | |
+| `chatterbox_multilingual_ru` | `100.0` |
+| `silero_tts_v5_ru` | `80.0` |
+| `silero_tts_v4_ru` | `100.0` |
 
-Вывод:
+Вывод: по графическим сокращениям лучшую, хотя и все еще слабую, точность показала `silero_tts_v5_ru`. Две другие модели ошиблись во всех 10 из 10 примеров.
 
 ### Таблица 3. Ошибки чтения аббревиатур
 
 | Модель | Ошибок, % |
 |---|---|
-| `chatterbox_multilingual_ru` | |
-| `f5_tts_russian` | |
-| `espeech_tts_rl_v2` | |
-| `silero_tts_v5_ru` | |
-| `silero_tts_v4_ru` | |
+| `chatterbox_multilingual_ru` | `100.0` |
+| `silero_tts_v5_ru` | `100.0` |
+| `silero_tts_v4_ru` | `100.0` |
 
-Вывод:
+Вывод: ни одна из трёх моделей не справилась с блоком аббревиатур; по текущей разметке все допустили ошибки во всех примерах.
 
 ### Таблица 4. Ошибки чтения цифровых обозначений
 
 | Модель | Ошибок, % |
 |---|---|
-| `chatterbox_multilingual_ru` | |
-| `f5_tts_russian` | |
-| `espeech_tts_rl_v2` | |
-| `silero_tts_v5_ru` | |
-| `silero_tts_v4_ru` | |
+| `chatterbox_multilingual_ru` | `100.0` |
+| `silero_tts_v5_ru` | `100.0` |
+| `silero_tts_v4_ru` | `100.0` |
 
-Вывод:
+Вывод: с цифровыми обозначениями все три модели показали одинаково неудовлетворительный результат.
 
 ### Таблица 5. Наблюдения по ударению
 
 | Модель | Наблюдения |
 |---|---|
-| `chatterbox_multilingual_ru` | |
-| `f5_tts_russian` | |
-| `espeech_tts_rl_v2` | |
-| `silero_tts_v5_ru` | |
-| `silero_tts_v4_ru` | |
+| `chatterbox_multilingual_ru` | В `manual_scores.csv` для stress-примера отмечено `has_error=yes`, но поле `stress_notes` не заполнено. |
+| `silero_tts_v5_ru` | В `manual_scores.csv` для stress-примера отмечено `has_error=yes`, но поле `stress_notes` не заполнено. |
+| `silero_tts_v4_ru` | В `manual_scores.csv` для stress-примера отмечено `has_error=yes`, но поле `stress_notes` не заполнено. |
 
-Вывод:
+Вывод: в текущих результатах у всех трёх моделей зафиксирована проблема на stress-примере, но качественные комментарии не заполнены, поэтому сравнение по ударению пока неполное.
 
 ## Общий вывод
 
-После заполнения таблиц здесь нужно кратко сравнить:
-- какая модель быстрее стартует
-- какая лучше читает сокращения
-- какая лучше читает числа
-- у какой модели меньше проблем с ударением
-- какая модель в целом показала лучший баланс
+По текущей сводке лучший баланс показывает `silero_tts_v5_ru`: у неё минимальная средняя latency (`0.080` сек) и наименьший процент ошибок в графических сокращениях (`80%` против `100%` у остальных). При этом по аббревиатурам и числам преимущества ни у одной модели нет: все три системы ошиблись во всех размеченных примерах.
+
+`silero_tts_v4_ru` занимает промежуточное место по скорости (`0.093` сек), но не даёт выигрыша по качеству чтения. `chatterbox_multilingual_ru` оказалась самой медленной (`0.139` сек) и по всем трём числовым критериям показала максимальный процент ошибок.
+
+Сравнение по ударению в текущем виде нельзя считать завершённым: в `manual_scores.csv` у всех трёх моделей стоит `has_error=yes`, но детальные `stress_notes` отсутствуют.
 
 ## Что автоматизировано
 
