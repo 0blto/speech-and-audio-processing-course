@@ -69,14 +69,20 @@ def audio_to_samples(audio: object) -> list[float]:
     if hasattr(audio, "tolist"):
         audio = audio.tolist()
 
-    # Уплощаем вложенные списки в единый список float
+    # Уплощаем вложенные списки в единый список float без pop(0),
+    # чтобы не получить квадратичную деградацию на длинном аудио.
     if isinstance(audio, list):
+        if not audio:
+            return []
+        if not isinstance(audio[0], list):
+            return [float(value) for value in audio]
+
         flattened: list[float] = []
-        stack = list(audio)
+        stack = list(reversed(audio))
         while stack:
-            value = stack.pop(0)
+            value = stack.pop()
             if isinstance(value, list):
-                stack = list(value) + stack
+                stack.extend(reversed(value))
                 continue
             flattened.append(float(value))
         return flattened

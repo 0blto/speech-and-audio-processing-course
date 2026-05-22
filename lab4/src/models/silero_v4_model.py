@@ -4,6 +4,11 @@ Fallbacks:
     Если silero или torch не установлены, адаптер завершится RuntimeError с понятным сообщением.
 """
 
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = None
+
 # Подключаем общие утилиты
 from models.helpers import prepare_text_common
 from models.helpers import concat_audio_segments
@@ -115,7 +120,10 @@ def synthesize(model_handle: object, config: dict, text: str, output_path: str) 
     # Для длинного текста синтезируем куски отдельно и склеиваем в один wav.
     if len(text_chunks) > 1:
         audio_segments = []
-        for chunk in text_chunks:
+        chunk_iterator = text_chunks
+        if tqdm is not None:
+            chunk_iterator = tqdm(text_chunks, desc=f"{config.get('id', 'silero_v4')} chunks", unit="chunk")
+        for chunk in chunk_iterator:
             audio_segments.append(model_handle.apply_tts(text=chunk, speaker=speaker_name, sample_rate=sample_rate))
         save_audio_data(output_path, concat_audio_segments(audio_segments, sample_rate), sample_rate)
         return {
